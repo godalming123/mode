@@ -1,0 +1,77 @@
+# Originally made by Isaac Van Doren. Source at https://github.com/isaacvando/elm-to-gh-pages.
+name: Deploy mode to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install elm
+        uses: jorelali/setup-elm@v6
+        with:
+          elm-version: 0.19.1
+
+      - name: Install gleam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: false
+          gleam-version: 1.12.0
+
+      - name: Install node JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+
+      - name: Install uglify JS
+        run: npm install -g uglify-js
+
+      - name: Install nushell
+        run: |
+          NU_VERSION="0.106.1"
+          ARCH=$(dpkg --print-architecture)
+          case "$ARCH" in
+            amd64) TARGET_ARCH="x86_64";;
+            arm64) TARGET_ARCH="aarch64";;
+            *)
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+              ;;
+          esac
+          curl --location "https://github.com/nushell/nushell/releases/download/$NU_VERSION/nu-$NU_VERSION-$TARGET_ARCH-unknown-linux-gnu.tar.gz" | tar xz -C .
+          mkdir -p "$HOME/.local/bin"
+          mv "nu-$NU_VERSION-$TARGET_ARCH-unknown-linux-gnu/nu" "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          nu --version
+
+      - run: ./build.nu optimized
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build-output'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

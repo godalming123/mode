@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mode editor</title>
+  <script type="text/javascript" src="elm.js"></script>
+</head>
+<body><div></div></body>
+<script type="module">
+
+class HtmlView extends HTMLElement {
+    constructor() {
+        super()
+        this._html = ""
+    }
+
+    get html() {
+        return this._html
+    }
+
+    set html(value) {
+      this._html = value
+      if (this.shadow)
+        this.shadow.innerHTML = value
+    }
+    connectedCallback() {
+        this.shadow = this.attachShadow({ mode: 'closed' })
+        this.shadow.innerHTML = this._html
+    }
+}
+
+window.customElements.define('html-view', HtmlView);
+ 
+var app = Elm.Main.init({
+  node: document.querySelector('div')
+});
+
+const worker = new Worker("worker.js", {type: "module"})
+worker.onerror = e => {console.error("Worker error", e)}
+
+app.ports.send.subscribe(message => {
+  worker.postMessage(message)
+})
+
+worker.onmessage = (message) => {
+  app.ports.receive.send(message.data)
+}
+ 
+</script>
+</html>
