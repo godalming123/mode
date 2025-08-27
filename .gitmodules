@@ -1,0 +1,8 @@
+[submodule "elm-ui"]
+	path = elm-ui
+	url = https://github.com/mdgriffith/elm-ui.git
+	branch = 2.0
+[submodule "elm-animator"]
+	path = elm-animator
+	url = https://github.com/mdgriffith/elm-animator.git
+	branch = v2
